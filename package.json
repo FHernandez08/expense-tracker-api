@@ -1,0 +1,26 @@
+{
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  },
+  "name": "expense-tracker-api",
+  "version": "1.0.0",
+  "description": "Expense tracker API from Fidel Hernandez, designed to be used as the backend portion of an expense tracker app.",
+  "main": "server.ts",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FHernandez08/expense-tracker-api.git"
+  },
+  "author": "Fidel Hernandez",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/FHernandez08/expense-tracker-api/issues"
+  },
+  "homepage": "https://github.com/FHernandez08/expense-tracker-api#readme"
+}
