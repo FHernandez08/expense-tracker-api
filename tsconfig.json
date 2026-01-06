@@ -7,14 +7,18 @@
 
     // Environment Settings
     // See also https://aka.ms/tsconfig/module
-    "module": "nodenext",
-    "target": "esnext",
-    "types": [],
+    "module": "CommonJS",
+    "target": "ES2022",
+    "types": ["node"],
+    "rootDir": ".",
+    "outDir": "dist",
+    "esModuleInterop": true,
+
     // For nodejs:
     // "lib": ["esnext"],
     // "types": ["node"],
     // and npm install -D @types/node
-
+ 
     // Other Outputs
     "sourceMap": true,
     "declaration": true,
@@ -35,10 +39,11 @@
     // Recommended Options
     "strict": true,
     "jsx": "react-jsx",
-    "verbatimModuleSyntax": true,
+    "verbatimModuleSyntax": false,
     "isolatedModules": true,
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
     "skipLibCheck": true,
-  }
+  },
+  "include": ["src", "tests", "jest.config.js"]
 }

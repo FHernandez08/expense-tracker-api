@@ -1,8 +1,22 @@
 {
   "devDependencies": {
-    "typescript": "^5.9.3"
+    "@eslint/js": "^9.39.2",
+    "@types/express": "^5.0.6",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^25.0.3",
+    "@types/supertest": "^6.0.3",
+    "eslint": "^9.39.2",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "prettier": "^3.7.4",
+    "supertest": "^7.2.2",
+    "ts-jest": "^29.4.6",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.52.0"
   },
   "name": "expense-tracker-api",
+  "type": "module",
   "version": "1.0.0",
   "description": "Expense tracker API from Fidel Hernandez, designed to be used as the backend portion of an expense tracker app.",
   "main": "server.ts",
@@ -11,7 +25,12 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "tsx src/server.ts",
+    "build": "tsc",
+    "start": "node dist/src/server.js",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "test": "jest"
   },
   "repository": {
     "type": "git",
@@ -22,5 +41,10 @@
   "bugs": {
     "url": "https://github.com/FHernandez08/expense-tracker-api/issues"
   },
-  "homepage": "https://github.com/FHernandez08/expense-tracker-api#readme"
+  "homepage": "https://github.com/FHernandez08/expense-tracker-api#readme",
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "zod": "^4.3.5"
+  }
 }
