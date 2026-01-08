@@ -180,6 +180,45 @@ A protected endpoint is exposed to return the authenticated user’s identity.
   "userId": "<cognito-sub>"
 }
 ```
+
+### Authorization Enforcement
+- Requests without a token are blocked by API Gateway
+- Invalid tokens never reach Lambda
+- Lambda includes a defensive guard for safety in case of misconfiguration
+
+---
+
+## Lambda Request Handling
+A single Lambda handler processes multiple routes using manual routing.
+
+### Routes
+- `GET /health` - Public health check
+- `GET /me` - Protected identity endpoint
+- All other paths return 404 Not Found
+
+### Defensive Authorization Guard
+Even though authentication is enforced at the API Gateway level, Lambda includes a failsafe check to ensure:
+- Authorizer context exists
+- JWT and claims are present
+- `sub` is a valid non-empty string
+This prevents runtime errors and guarantees clean 401 Unauthorized responses in edge cases.
+
+---
+
+## Stack Outputs
+The deployment provides the following outputs:
+- **ApiEndpoint** - Base URL for the API
+- **UserPoolId** - Cognito issuer reference
+- **UserPoolClientId** - Used for authentication and JWT audience validation
+
+--- 
+
+## Verification
+- `/health` returns `200 OK`
+- `/me` without a token returns `401 Unauthorized`
+- `/me` with a valid Cognito JWT returns `200 OK` with the user ID
+- Unauthorized requests are rejected before lambda execution
+
 ---
 ---
 ---
