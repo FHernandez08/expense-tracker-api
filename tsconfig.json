@@ -45,5 +45,5 @@
     "moduleDetection": "force",
     "skipLibCheck": true,
   },
-  "include": ["src", "tests", "jest.config.js"]
+  "include": ["src", "tests", "jest.config.js", "lambda/schemas"]
 }

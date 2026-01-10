@@ -7,7 +7,7 @@ import * as apigwv2 from 'aws-cdk-lib/aws-apigatewayv2';
 import * as apigwiv2integrations from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { UserPool } from 'aws-cdk-lib/aws-cognito';
 import { HttpJwtAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
-
+import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 
 // import * as sqs from 'aws-cdk-lib/aws-sqs';
 
@@ -15,12 +15,21 @@ export class InfraStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    // The code that defines your stack goes here
+    // create DynamoDB Categories table
+    const categoriesTable = new dynamodb.Table(this, 'ETCategoriesTable', {
+      partitionKey: {
+        name: 'userId',
+        type: dynamodb.AttributeType.STRING,
+      },
+      sortKey: {
+        name: 'categoryId',
+        type: dynamodb.AttributeType.STRING,
+      },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      tableName: 'expense-tracker-categories',
+      removalPolicy: cdk.RemovalPolicy.RETAIN
+    });
 
-    // example resource
-    // const queue = new sqs.Queue(this, 'InfraQueue', {
-    //   visibilityTimeout: cdk.Duration.seconds(300)
-    // });
 
     // auth section //
     // create Cognito User Pool
@@ -54,8 +63,14 @@ export class InfraStack extends cdk.Stack {
       code: lambda.Code.fromAsset(path.join(__dirname, '../../lambda')),
       handler: 'handler.handler',
       timeout: cdk.Duration.seconds(15),
-      functionName: 'MyApiFunction'
+      functionName: 'MyApiFunction',
+      environment: {
+        CATEGORIES_TABLE_NAME: categoriesTable.tableName
+      }
     });
+
+    // Granted Lambda permissions for categories table
+    categoriesTable.grantReadWriteData(httpApiLambda);
 
     // API Gateway HTTP API created
     const httpApi = new apigwv2.HttpApi(this, 'HttpApi', {
@@ -78,6 +93,7 @@ export class InfraStack extends cdk.Stack {
     // Lambda Integration
     const lambdaIntegration = new apigwiv2integrations.HttpLambdaIntegration('LambdaIntegration', httpApiLambda);
 
+    /* -------- Routes ----------*/
     // GET /health route
     httpApi.addRoutes({
       path: '/health',
@@ -90,8 +106,43 @@ export class InfraStack extends cdk.Stack {
       path: '/me',
       methods: [apigwv2.HttpMethod.GET],
       integration: lambdaIntegration,
-      authorizer: authorizer
-    })
+      authorizer: authorizer,
+    });
+
+    /* ----- categories routes ----- */
+    // POST /categories route
+    httpApi.addRoutes({
+      path: '/categories',
+      methods: [apigwv2.HttpMethod.POST],
+      integration: lambdaIntegration,
+      authorizer: authorizer,
+    });
+
+    // GET /categories route
+    httpApi.addRoutes({
+      path: '/categories',
+      methods: [apigwv2.HttpMethod.GET],
+      integration: lambdaIntegration,
+      authorizer: authorizer,
+    });
+
+    // PATCH /categories/{id} route
+    httpApi.addRoutes({
+      path: '/categories/{id}',
+      methods: [apigwv2.HttpMethod.PATCH],
+      integration: lambdaIntegration,
+      authorizer: authorizer,
+    });
+
+    // DELETE /categories/{id} route
+    httpApi.addRoutes({
+      path: '/categories/{id}',
+      methods: [apigwv2.HttpMethod.DELETE],
+      integration: lambdaIntegration,
+      authorizer: authorizer,
+    });
+
+    /* -------- OUTPUTS ----------*/
 
     // Output the API base URL
     new cdk.CfnOutput(this, 'ApiEndpoint', {

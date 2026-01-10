@@ -222,3 +222,196 @@ The deployment provides the following outputs:
 ---
 ---
 ---
+
+## Request Validation
+
+All write operations use **Zod** for runtime validation.
+
+### Validation Flow
+1. Ensure request body exists
+2. Parse JSON safely
+3. Validate schema using Zod
+4. Reject invalid input before database access
+
+Invalid requests return `400 Bad Request`.
+
+---
+
+## API Endpoints
+
+All endpoints require a valid **Cognito JWT**.
+
+---
+
+### `GET /categories`
+
+Returns all categories owned by the authenticated user.
+
+#### Behavior
+- Queries DynamoDB using the `userId` partition key
+- Returns an empty array if no categories exist
+
+#### Responses
+- `200 OK`
+- `401 Unauthorized`
+- `500 Internal Server Error`
+
+---
+
+### `POST /categories`
+
+Creates a new category for the authenticated user.
+
+#### Request Body
+```json
+{
+  "name": "Food"
+}
+```
+
+#### Behavior
+
+-   Validates input using Zod
+
+-   Generates `categoryId` using `crypto.randomUUID()`
+
+-   Sets `createdAt` and `updatedAt`
+
+-   Writes item using `PutCommand`
+
+#### Responses
+
+-   `201 Created`
+
+-   `400 Bad Request`
+
+-   `401 Unauthorized`
+
+-   `500 Internal Server Error`
+
+* * * * *
+
+### `PATCH /categories/{id}`
+
+Updates an existing category owned by the user.
+
+#### Request Body
+
+`{
+  "name": "Groceries"
+}`
+
+#### Behavior
+
+-   Validates request body
+
+-   Uses `UpdateCommand`
+
+-   Uses `ConditionExpression` to prevent upserts
+
+-   Ensures the category exists and belongs to the user
+
+-   Returns updated item attributes
+
+#### Responses
+
+-   `200 OK`
+
+-   `400 Bad Request`
+
+-   `401 Unauthorized`
+
+-   `404 Not Found`
+
+-   `500 Internal Server Error`
+
+* * * * *
+
+### `DELETE /categories/{id}`
+
+Deletes a category owned by the user.
+
+#### Behavior
+
+-   Uses `DeleteCommand`
+
+-   Requires both `userId` and `categoryId`
+
+-   Prevents deleting categories owned by other users
+
+#### Responses
+
+-   `204 No Content`
+
+-   `401 Unauthorized`
+
+-   `404 Not Found`
+
+-   `500 Internal Server Error`
+
+* * * * *
+
+Error Handling Strategy
+-----------------------
+
+| Status Code | Meaning |
+| --- | --- |
+| `401` | Missing, invalid, or expired JWT |
+| `400` | Invalid request body or parameters |
+| `404` | Resource does not exist for the authenticated user |
+| `500` | Unhandled server errors |
+
+DynamoDB conditional failures are explicitly mapped to `404 Not Found` to prevent information leakage.
+
+* * * * *
+
+Deployment
+----------
+
+Infrastructure and services are deployed using **AWS CDK**.
+
+`cdk deploy`
+
+This deploys:
+
+-   DynamoDB Categories table
+
+-   API Lambda function
+
+-   API Gateway HTTP API
+
+-   Cognito JWT Authorizer
+
+-   IAM permissions for DynamoDB access
+
+* * * * *
+
+Testing & Verification
+----------------------
+
+All routes were tested using:
+
+-   `curl`
+
+-   Real Amazon Cognito JWT tokens
+
+### Verified Scenarios
+
+-   Successful CRUD lifecycle
+
+-   Empty category lists
+
+-   Invalid request bodies
+
+-   Expired tokens
+
+-   Unauthorized access attempts
+
+-   Cross-user access prevention
+
+-   Conditional update and delete behavior
+
+
+---
+---
+---
