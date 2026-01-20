@@ -1,0 +1,148 @@
+openapi: 3.0.3
+
+info:
+  title: Expense Tracker API
+  description: >
+    A serverless Expense Tracker API built with AWS CDK, API Gateway,
+    Lambda, Cognito authentication, and DynamoDB.
+  version: 0.1.0
+
+servers:
+  - url: https://nll100bzb7.execute-api.us-east-1.amazonaws.com
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+
+    MeResponse:
+      type: object
+      properties:
+        sub:
+          type: string
+          example: user-123
+
+    Category:
+      type: object
+      properties:
+        id:
+          type: string
+          example: cat-123
+        name:
+          type: string
+          example: Food
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateCategoryRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          example: Transportation
+
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Unauthorized
+        requestId:
+          type: string
+          example: req-abc123
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      description: Public endpoint to verify API availability
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /me:
+    get:
+      summary: Get current user
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Authenticated user info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /categories:
+    get:
+      summary: List categories
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of user categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      summary: Create category
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCategoryRequest'
+      responses:
+        '201':
+          description: Category created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
