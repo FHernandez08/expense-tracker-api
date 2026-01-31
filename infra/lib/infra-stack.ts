@@ -106,7 +106,7 @@ export class InfraStack extends cdk.Stack {
 
     /* ------------------ API Layer ------------------ */
     // defines the Authorizer using your User Pool and Client
-    const userPoolAuthorizer = new HttpUserPoolAuthorizer('ExpenseTrackerAuthorizer', userPool, {
+    const userPoolAuthorizer = new HttpUserPoolAuthorizer('MyUserPoolAuthorizer', userPool, {
       userPoolClients: [userPoolClient],
     })
 
