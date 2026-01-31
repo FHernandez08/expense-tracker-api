@@ -10,6 +10,7 @@ import { HttpJwtAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as s3 from 'aws-cdk-lib/aws-s3';
+import { HttpUserPoolAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
 
 interface InfraStackProps extends cdk.StackProps {
   stage: string;
@@ -104,12 +105,23 @@ export class InfraStack extends cdk.Stack {
     categoriesTable.grantReadWriteData(httpApiLambda);
 
     /* ------------------ API Layer ------------------ */
+    // defines the Authorizer using your User Pool and Client
+    const authorizer = new HttpUserPoolAuthorizer('ExpenseTrackerAuthorizer', userPool, {
+      userPoolClients: [userPoolClient],
+    })
+
     // API Gateway HTTP API created
     const httpApi = new apigwv2.HttpApi(this, 'HttpApi', {
+      defaultAuthorizer: authorizer,
       apiName: 'ExpenseTrackerHttpApi',
       corsPreflight: {
         allowOrigins: ['*'],
-        allowMethods: [apigwv2.CorsHttpMethod.GET, apigwv2.CorsHttpMethod.POST],
+        allowMethods: [
+          apigwv2.CorsHttpMethod.GET, 
+          apigwv2.CorsHttpMethod.POST,
+          apigwv2.CorsHttpMethod.PUT,
+          apigwv2.CorsHttpMethod.DELETE
+        ],
       },
     });
 
