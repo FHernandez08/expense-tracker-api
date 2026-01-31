@@ -9,7 +9,7 @@
     // See also https://aka.ms/tsconfig/module
     "module": "CommonJS",
     "target": "ES2022",
-    "types": ["node"],
+    "types": ["node", "jest"],
     "rootDir": ".",
     "outDir": "dist",
     "esModuleInterop": true,
