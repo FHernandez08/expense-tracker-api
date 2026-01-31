@@ -81,7 +81,7 @@ export class InfraStack extends cdk.Stack {
     });
 
     // Cognito User Pool Client
-    const userPoolClient = userPool.addClient('ExpenseTrackerClient', {
+    const userPoolClient = userPool.addClient('ExpenseTrackerUserPoolV2', {
       authFlows: {
         userPassword: true,
       },
