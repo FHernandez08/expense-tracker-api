@@ -63,7 +63,7 @@ export class InfraStack extends cdk.Stack {
 
     // auth section //
     // create Cognito User Pool
-    const userPool = new UserPool(this, 'ExpenseTrackerUserPool', {
+    const userPool = new cdk.aws_cognito.UserPool(this, 'ExpenseTrackerUserPoolV2', {
       signInAliases: {
         email: true,
       },
@@ -81,7 +81,7 @@ export class InfraStack extends cdk.Stack {
     });
 
     // Cognito User Pool Client
-    const userPoolClient = userPool.addClient('ExpenseTrackerUserPoolV2', {
+    const userPoolClient = userPool.addClient('ExpenseTrackerClient', {
       authFlows: {
         userPassword: true,
       },
