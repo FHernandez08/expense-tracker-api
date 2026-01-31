@@ -1,4 +1,4 @@
-import * as cdk from 'aws-cdk-lib/core';
+import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 
 import * as lambda from 'aws-cdk-lib/aws-lambda';
@@ -16,7 +16,7 @@ interface InfraStackProps extends cdk.StackProps {
   namePrefix: string;
 }
 export class InfraStack extends cdk.Stack {
-  constructor(scope: Construct, id: string, props: InfraStackProps) {
+  constructor(scope: cdk.App, id: string, props: InfraStackProps) {
     super(scope, id, props);
 
     const { stage, namePrefix } = props;
