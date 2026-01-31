@@ -2,6 +2,7 @@ import * as cdk from 'aws-cdk-lib';
 
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import * as apigwv2 from 'aws-cdk-lib/aws-apigatewayv2';
 import * as apigwiv2integrations from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { UserPool } from 'aws-cdk-lib/aws-cognito';
@@ -20,6 +21,8 @@ export class InfraStack extends cdk.Stack {
     super(scope, id, props);
 
     const { stage, namePrefix } = props;
+
+    const lambdaCodePath = path.join(process.cwd(), 'src', 'lambda')
 
     /* ------------------ Data Layer ------------------ */
     // create DynamoDB Categories table
@@ -88,7 +91,7 @@ export class InfraStack extends cdk.Stack {
     // lambda function that points to the handler
     const httpApiLambda = new lambda.Function(this, 'LambdaHandler', {
       runtime: lambda.Runtime.NODEJS_20_X,
-      code: lambda.Code.fromAsset(path.join(__dirname, '../../lambda')),
+      code: lambda.Code.fromAsset(lambdaCodePath),
       handler: 'handler.handler',
       timeout: cdk.Duration.seconds(15),
       environment: {
