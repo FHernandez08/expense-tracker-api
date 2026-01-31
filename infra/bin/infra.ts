@@ -3,7 +3,13 @@ import * as cdk from 'aws-cdk-lib/core';
 import { InfraStack } from '../lib/infra-stack';
 
 const app = new cdk.App();
-new InfraStack(app, 'InfraStack', {
+
+const stage = app.node.tryGetContext('stage') || 'dev';
+const stackId = `InfraStack-${stage}`;
+const namePrefix = `expense-tracker-${stage}`;
+
+
+new InfraStack(app, stackId, {
   /* If you don't specify 'env', this stack will be environment-agnostic.
    * Account/Region-dependent features and context lookups will not work,
    * but a single synthesized template can be deployed anywhere. */
@@ -15,6 +21,9 @@ new InfraStack(app, 'InfraStack', {
   /* Uncomment the next line if you know exactly what Account and Region you
    * want to deploy the stack to. */
   env: { account: '127679826220', region: 'us-east-1' },
+  stackName: stackId,
+  stage,
+  namePrefix,
 
   /* For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html */
 });

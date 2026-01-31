@@ -7,14 +7,14 @@ This project demonstrates production-style backend architecture including authen
 
 ## Live Links
 
-- **API Base URL:**  
-  https://nll100bzb7.execute-api.us-east-1.amazonaws.com
+- **Live Demo (Swagger UI):**  
+  https://nll100bzb7.execute-api.us-east-1.amazonaws.com/docs
 
 - **Health Check:**  
   https://nll100bzb7.execute-api.us-east-1.amazonaws.com/health
 
-- **API Documentation (Swagger UI):**  
-  https://nll100bzb7.execute-api.us-east-1.amazonaws.com/docs
+- **API Base URL:**  
+  https://nll100bzb7.execute-api.us-east-1.amazonaws.com
 
 ---
 

@@ -9,11 +9,15 @@ import { UserPool } from 'aws-cdk-lib/aws-cognito';
 import { HttpJwtAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 
-// import * as sqs from 'aws-cdk-lib/aws-sqs';
-
+interface InfraStackProps extends cdk.StackProps {
+  stage: string;
+  namePrefix: string;
+}
 export class InfraStack extends cdk.Stack {
-  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+  constructor(scope: Construct, id: string, props: InfraStackProps) {
     super(scope, id, props);
+
+    const { stage, namePrefix } = props;
 
     // create DynamoDB Categories table
     const categoriesTable = new dynamodb.Table(this, 'ETCategoriesTable', {
@@ -26,7 +30,7 @@ export class InfraStack extends cdk.Stack {
         type: dynamodb.AttributeType.STRING,
       },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-      tableName: 'expense-tracker-categories',
+      tableName: `${namePrefix}-categories`,
       removalPolicy: cdk.RemovalPolicy.RETAIN
     });
 
@@ -63,9 +67,9 @@ export class InfraStack extends cdk.Stack {
       code: lambda.Code.fromAsset(path.join(__dirname, '../../lambda')),
       handler: 'handler.handler',
       timeout: cdk.Duration.seconds(15),
-      functionName: 'MyApiFunction',
       environment: {
-        CATEGORIES_TABLE_NAME: categoriesTable.tableName
+        CATEGORIES_TABLE_NAME: categoriesTable.tableName,
+        STAGE: stage,
       }
     });
 
@@ -99,6 +103,20 @@ export class InfraStack extends cdk.Stack {
       path: '/health',
       methods: [apigwv2.HttpMethod.GET],
       integration: lambdaIntegration,
+    });
+
+    // GET /openapi.yaml route
+    httpApi.addRoutes({
+      path: '/openapi.yaml',
+      methods: [apigwv2.HttpMethod.GET],
+      integration: lambdaIntegration
+    });
+
+    // GET /docs route
+    httpApi.addRoutes({
+      path: '/docs',
+      methods: [apigwv2.HttpMethod.GET],
+      integration: lambdaIntegration
     });
 
     // GET /me route

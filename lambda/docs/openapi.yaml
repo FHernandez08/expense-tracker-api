@@ -1,0 +1,339 @@
+openapi: 3.0.3
+
+info:
+  title: Expense Tracker API
+  description: >
+    A serverless Expense Tracker API built with AWS CDK, API Gateway (HTTP API),
+    AWS Lambda, Cognito JWT authentication, and DynamoDB.
+  version: 0.1.0
+
+servers:
+  - url: https://nll100bzb7.execute-api.us-east-1.amazonaws.com
+
+tags:
+  - name: System
+  - name: Auth
+  - name: Categories
+  - name: Docs
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    MeResponse:
+      type: object
+      required: [userId]
+      properties:
+        userId:
+          type: string
+          description: Cognito subject (sub) for the authenticated user
+          example: 8dbbda26-7003-4c6d-883b-de29aee8e5a7
+
+    CategoryItem:
+      type: object
+      required: [userId, categoryId, name, createdAt, updatedAt]
+      properties:
+        userId:
+          type: string
+          description: Owner user id (Cognito sub)
+          example: 8dbbda26-7003-4c6d-883b-de29aee8e5a7
+        categoryId:
+          type: string
+          example: 2f9a3f0e-4d5a-4a1c-9c3a-3e8b4c13b0d1
+        name:
+          type: string
+          example: Food
+        createdAt:
+          type: string
+          format: date-time
+          example: 2026-01-20T16:10:00.000Z
+        updatedAt:
+          type: string
+          format: date-time
+          example: 2026-01-20T16:10:00.000Z
+
+    CategoriesListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryItem"
+
+    CreateCategoryRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          example: Transportation
+
+    CreateCategoryResponse:
+      type: object
+      required: [id, name, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          description: Newly created category id
+          example: 2f9a3f0e-4d5a-4a1c-9c3a-3e8b4c13b0d1
+        name:
+          type: string
+          example: Transportation
+        createdAt:
+          type: string
+          format: date-time
+          example: 2026-01-20T16:10:00.000Z
+        updatedAt:
+          type: string
+          format: date-time
+          example: 2026-01-20T16:10:00.000Z
+
+    UpdateCategoryRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          example: Groceries
+
+    ErrorText:
+      type: string
+      example: Unauthorized!
+
+paths:
+  /health:
+    get:
+      tags: [System]
+      summary: Health check
+      description: Public endpoint to verify the API is running.
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: ok
+
+  /docs:
+    get:
+      tags: [Docs]
+      summary: Swagger UI
+      description: Public Swagger UI page (served by the Lambda).
+      responses:
+        "200":
+          description: HTML page for Swagger UI
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /openapi.yaml:
+    get:
+      tags: [Docs]
+      summary: OpenAPI specification
+      description: Public OpenAPI YAML used by Swagger UI.
+      responses:
+        "200":
+          description: OpenAPI YAML file
+          content:
+            text/yaml:
+              schema:
+                type: string
+        "500":
+          description: Spec could not be loaded
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Internal Server Error
+
+  /me:
+    get:
+      tags: [Auth]
+      summary: Get current user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Authenticated user identity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeResponse"
+        "401":
+          description: Unauthorized
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/ErrorText"
+
+  /categories:
+    get:
+      tags: [Categories]
+      summary: List categories
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Categories for the authenticated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoriesListResponse"
+        "401":
+          description: Unauthorized
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/ErrorText"
+        "500":
+          description: Internal Server Error
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Internal Server Error!
+
+    post:
+      tags: [Categories]
+      summary: Create category
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCategoryRequest"
+      responses:
+        "201":
+          description: Category created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateCategoryResponse"
+        "400":
+          description: Bad Request (invalid JSON or validation failure)
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Bad Request
+        "401":
+          description: Unauthorized
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/ErrorText"
+        "500":
+          description: Internal Server Error
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Internal Server Error
+
+  /categories/{id}:
+    patch:
+      tags: [Categories]
+      summary: Update category
+      description: Updates the category name for the authenticated user.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Category id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCategoryRequest"
+      responses:
+        "200":
+          description: Updated category item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryItem"
+        "400":
+          description: Bad Request (missing id, invalid JSON, or validation failure)
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Bad Request
+        "401":
+          description: Unauthorized
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/ErrorText"
+        "404":
+          description: Not Found (category does not exist)
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Not Found
+        "500":
+          description: Internal Server Error
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Internal Server Error
+
+    delete:
+      tags: [Categories]
+      summary: Delete category
+      description: Deletes a category for the authenticated user.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Category id
+      responses:
+        "204":
+          description: Deleted successfully (no content)
+        "400":
+          description: Bad Request (missing id)
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Bad Request!
+        "401":
+          description: Unauthorized
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/ErrorText"
+        "404":
+          description: Not Found (category does not exist)
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Not Found
+        "500":
+          description: Internal Server Error
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Internal Server Error

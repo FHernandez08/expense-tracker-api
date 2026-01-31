@@ -1,28 +1,101 @@
 const { DynamoDBClient, ConditionalCheckFailedException, Delete$ } = require("@aws-sdk/client-dynamodb");
 const { DynamoDBDocumentClient, PutCommand, QueryCommand, UpdateCommand, DeleteCommand } = require("@aws-sdk/lib-dynamodb");
 const categorySchema = require("./schemas/category.schema.js");
+const fs = require("fs");
+const path = require("path");
 
 module.exports.handler = async (event) => {
     // eslint-disable-next-line no-undef
     console.log('Request event: ', event);
 
     const categoriesTableName = process.env.CATEGORIES_TABLE_NAME;
-    const path = event.rawPath;
+    const rawPath = event.rawPath;
     const method = event.requestContext.http.method;
     const client = new DynamoDBClient({});
     const documentClient = DynamoDBDocumentClient.from(client);
 
     // /health branch
-    if (method === "GET" && path === "/health") {
+    if (method === "GET" && rawPath === "/health") {
         return {
             statusCode: 200,
             headers: { "Content-Type": "text/plain" },
             body: "ok"
         }
+    };
+
+    // /openapi.yaml branch
+    if (method === "GET" && rawPath === "/openapi.yaml") {
+        try {
+            const specPath = path.join(__dirname, "docs", "openapi.yaml");
+            const yamlText = fs.readFileSync(specPath, "utf-8");
+
+            return {
+                statusCode: 200,
+                headers: {
+                    "Content-Type": "text/yaml; charset=utf-8",
+                    "Cache-Control": "no-store",
+                },
+                body: yamlText,
+            };
+
+        } catch (err) {
+            console.log("Failed to read openapi.yaml", err);
+            return {
+                statusCode: 500,
+                headers: { "Content-Type": "text/plain; charset=utf-8" },
+                body: "Internal Server Error",
+            };
+        }
     }
 
+    // /docs branch (public) - Swagger UI (CDN)
+    if (method === "GET" && (rawPath === "/docs" || rawPath === "/docs/")) {
+    const html = `<!doctype html>
+        <html lang="en">
+        <head>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width,initial-scale=1" />
+            <title>Expense Tracker API Docs</title>
+            <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist/swagger-ui.css" />
+            <style>
+            body { margin: 0; }
+            .topbar { display: none; }
+            </style>
+        </head>
+        <body>
+            <div id="swagger-ui"></div>
+
+            <script src="https://unpkg.com/swagger-ui-dist/swagger-ui-bundle.js"></script>
+            <script src="https://unpkg.com/swagger-ui-dist/swagger-ui-standalone-preset.js"></script>
+            <script>
+            window.onload = () => {
+                window.ui = SwaggerUIBundle({
+                url: "/openapi.yaml",
+                dom_id: "#swagger-ui",
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                    SwaggerUIStandalonePreset
+                ],
+                layout: "StandaloneLayout"
+                });
+            };
+            </script>
+        </body>
+        </html>`;
+
+        return {
+            statusCode: 200,
+            headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            "Cache-Control": "no-store",
+            },
+            body: html,
+        };
+    }
+
+
     // /me branch
-    if (method === "GET" && path === "/me") {
+    if (method === "GET" && rawPath === "/me") {
         if (!event.requestContext.authorizer || !event.requestContext.authorizer.jwt || !event.requestContext.authorizer.jwt.claims) {
             return {
                 statusCode: 401,
@@ -50,7 +123,7 @@ module.exports.handler = async (event) => {
 
     /* categories section */
     // GET /categories branch
-    if (method === "GET" && path === "/categories") {
+    if (method === "GET" && rawPath === "/categories") {
         if (!event.requestContext.authorizer || !event.requestContext.authorizer.jwt || !event.requestContext.authorizer.jwt.claims) {
             return {
                 statusCode: 401,
@@ -101,7 +174,7 @@ module.exports.handler = async (event) => {
     }
 
     // POST /categories branch
-    if (method === "POST" && path === "/categories") {
+    if (method === "POST" && rawPath === "/categories") {
         if (!event.requestContext.authorizer || !event.requestContext.authorizer.jwt || !event.requestContext.authorizer.jwt.claims) {
             return {
                 statusCode: 401,
@@ -192,7 +265,7 @@ module.exports.handler = async (event) => {
     }
 
     // /PATCH /categories/{id}} branch
-    if (method === 'PATCH' && path.startsWith("/categories/")) {
+    if (method === 'PATCH' && rawPath.startsWith("/categories/")) {
         if (!event.requestContext.authorizer || !event.requestContext.authorizer.jwt || !event.requestContext.authorizer.jwt.claims) {
             return {
                 statusCode: 401,
@@ -310,7 +383,7 @@ module.exports.handler = async (event) => {
     }
     
     // DELETE /categories/{id} branch
-    if (method === 'DELETE' && path.startsWith("/categories/")) {
+    if (method === 'DELETE' && rawPath.startsWith("/categories/")) {
         if (!event.requestContext.authorizer || !event.requestContext.authorizer.jwt || !event.requestContext.authorizer.jwt.claims) {
             return {
                 statusCode: 401,
