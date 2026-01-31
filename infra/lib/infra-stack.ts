@@ -1,8 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
-import { Construct } from 'constructs';
 
 import * as lambda from 'aws-cdk-lib/aws-lambda';
-import * as path from 'path';
+import * as path from 'node:path';
 import * as apigwv2 from 'aws-cdk-lib/aws-apigatewayv2';
 import * as apigwiv2integrations from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { UserPool } from 'aws-cdk-lib/aws-cognito';
