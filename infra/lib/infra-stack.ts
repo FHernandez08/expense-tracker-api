@@ -8,6 +8,8 @@ import * as apigwiv2integrations from 'aws-cdk-lib/aws-apigatewayv2-integrations
 import { UserPool } from 'aws-cdk-lib/aws-cognito';
 import { HttpJwtAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import * as ssm from 'aws-cdk-lib/aws-ssm';
+import * as s3 from 'aws-cdk-lib/aws-s3';
 
 interface InfraStackProps extends cdk.StackProps {
   stage: string;
@@ -19,6 +21,7 @@ export class InfraStack extends cdk.Stack {
 
     const { stage, namePrefix } = props;
 
+    /* ------------------ Data Layer ------------------ */
     // create DynamoDB Categories table
     const categoriesTable = new dynamodb.Table(this, 'ETCategoriesTable', {
       partitionKey: {
@@ -34,6 +37,26 @@ export class InfraStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.RETAIN
     });
 
+    // adding private S3 bucket
+    const privateBucket = new s3.Bucket(this, 'csvExportsBucket', {
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      objectOwnership: s3.ObjectOwnership.BUCKET_OWNER_ENFORCED,
+      encryption: s3.BucketEncryption.KMS_MANAGED,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      lifecycleRules: [
+        {
+          enabled: true,
+          expiration: cdk.Duration.hours(24),
+        }
+      ]
+    });
+
+    /* ------------------ Config Layer ------------------ */
+    new ssm.StringParameter(this, 'devParameter', {
+      parameterName: `/${namePrefix}/table-name`,
+      stringValue: categoriesTable.tableName,
+      description: 'A parameter used inside the SSM Parameter store for the APIs environment',
+    });
 
     // auth section //
     // create Cognito User Pool
@@ -61,6 +84,7 @@ export class InfraStack extends cdk.Stack {
       },
     });
 
+    /* ------------------ Compute Layer ------------------ */
     // lambda function that points to the handler
     const httpApiLambda = new lambda.Function(this, 'LambdaHandler', {
       runtime: lambda.Runtime.NODEJS_20_X,
@@ -76,6 +100,7 @@ export class InfraStack extends cdk.Stack {
     // Granted Lambda permissions for categories table
     categoriesTable.grantReadWriteData(httpApiLambda);
 
+    /* ------------------ API Layer ------------------ */
     // API Gateway HTTP API created
     const httpApi = new apigwv2.HttpApi(this, 'HttpApi', {
       apiName: 'ExpenseTrackerHttpApi',
