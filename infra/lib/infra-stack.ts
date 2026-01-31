@@ -22,7 +22,7 @@ export class InfraStack extends cdk.Stack {
 
     const { stage, namePrefix } = props;
 
-    const lambdaCodePath = path.join(process.cwd(), 'src', 'lambda')
+    const lambdaCodePath = path.join(process.cwd(), 'lambda')
 
     /* ------------------ Data Layer ------------------ */
     // create DynamoDB Categories table
