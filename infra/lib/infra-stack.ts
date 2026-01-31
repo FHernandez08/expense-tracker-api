@@ -106,13 +106,13 @@ export class InfraStack extends cdk.Stack {
 
     /* ------------------ API Layer ------------------ */
     // defines the Authorizer using your User Pool and Client
-    const authorizer = new HttpUserPoolAuthorizer('ExpenseTrackerAuthorizer', userPool, {
+    const userPoolAuthorizer = new HttpUserPoolAuthorizer('ExpenseTrackerAuthorizer', userPool, {
       userPoolClients: [userPoolClient],
     })
 
     // API Gateway HTTP API created
     const httpApi = new apigwv2.HttpApi(this, 'HttpApi', {
-      defaultAuthorizer: authorizer,
+      defaultAuthorizer: userPoolAuthorizer,
       apiName: 'ExpenseTrackerHttpApi',
       corsPreflight: {
         allowOrigins: ['*'],
