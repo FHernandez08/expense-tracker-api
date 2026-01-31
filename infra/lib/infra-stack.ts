@@ -66,7 +66,6 @@ export class InfraStack extends cdk.Stack {
     const userPool = new UserPool(this, 'ExpenseTrackerUserPool', {
       signInAliases: {
         email: true,
-        username: true,
       },
       passwordPolicy: {
         minLength: 8,
@@ -78,6 +77,7 @@ export class InfraStack extends cdk.Stack {
       autoVerify: {
         email: true,
       },
+      removalPolicy: props.stage === 'prod' ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
     });
 
     // Cognito User Pool Client
