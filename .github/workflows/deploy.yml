@@ -39,5 +39,5 @@ jobs:
 
       # STEP 7: Action
       - name: CDK deploy
-        run: npx cdk deploy -c stage=dev --app "npx ts-node infra/infra.ts" --require-approval never
+        run: npx cdk deploy -c stage=dev --app "npx ts-node infra/bin/infra.ts" --require-approval never
 
