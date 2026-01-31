@@ -24,7 +24,7 @@ jobs:
 
       # STEP 5: Packages
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       # STEP 6: Login
       - name: Configure AWS Credentials

@@ -15,6 +15,7 @@ interface InfraStackProps extends cdk.StackProps {
   stage: string;
   namePrefix: string;
 }
+
 export class InfraStack extends cdk.Stack {
   constructor(scope: cdk.App, id: string, props: InfraStackProps) {
     super(scope, id, props);
