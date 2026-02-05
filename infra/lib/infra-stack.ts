@@ -129,6 +129,7 @@ export class InfraStack extends cdk.Stack {
     const issuer = `https://cognito-idp.us-east-1.amazonaws.com/${userPool.userPoolId}`;
     const audience = userPoolClient.userPoolClientId;
 
+    // authorizer for the routes
     const authorizer = new HttpJwtAuthorizer('ExpenseTrackerAuthorizer', issuer, {
       jwtAudience: [audience],
       identitySource: ["$request.header.Authorization"],
@@ -195,6 +196,39 @@ export class InfraStack extends cdk.Stack {
     // DELETE /categories/{id} route
     httpApi.addRoutes({
       path: '/categories/{id}',
+      methods: [apigwv2.HttpMethod.DELETE],
+      integration: lambdaIntegration,
+      authorizer: authorizer,
+    });
+
+    /* ----- budgets routes ----- */
+    // POST /budgets route
+    httpApi.addRoutes({
+      path:'/budgets',
+      methods: [apigwv2.HttpMethod.POST],
+      integration: lambdaIntegration,
+      authorizer: authorizer,
+    });
+
+    // GET /budgets route
+    httpApi.addRoutes({
+      path: '/budgets',
+      methods: [apigwv2.HttpMethod.GET],
+      integration: lambdaIntegration,
+      authorizer: authorizer,
+    });
+
+    // PATCH /budgets/{id} route
+    httpApi.addRoutes({
+      path: '/budgets/{id}',
+      methods: [apigwv2.HttpMethod.PATCH],
+      integration: lambdaIntegration,
+      authorizer: authorizer,
+    });
+
+    // DELETE /budgets/{id} route
+    httpApi.addRoutes({
+      path: '/budgets/{id}',
       methods: [apigwv2.HttpMethod.DELETE],
       integration: lambdaIntegration,
       authorizer: authorizer,
