@@ -1,11 +1,16 @@
 const { DynamoDBClient, ConditionalCheckFailedException, Delete$ } = require("@aws-sdk/client-dynamodb");
 const { DynamoDBDocumentClient, PutCommand, QueryCommand, UpdateCommand, DeleteCommand } = require("@aws-sdk/lib-dynamodb");
+const { CognitoIdentityProviderClient, SignUpCommand, ConfirmSignUpCommand } = require("@aws-cdk/client-cognito-identity-provider");
+
 const categorySchema = require("./schemas/category.schema.js");
 const budgetSchema = require("./schemas/budget.schema.js");
 const transactionSchema = require("./schemas/transaction.schema.js");
 const recurringRuleSchema = require("./schemas/rule.schema.js");
 const fs = require("fs");
 const path = require("path");
+const { raw } = require("express");
+
+const cognitoClient = new CognitoIdentityProviderClient({});
 
 module.exports.handler = async (event) => {
     console.log('Request event: ', event);
@@ -25,7 +30,7 @@ module.exports.handler = async (event) => {
         }
     };
 
-    // /openapi.yaml branch
+    // GET /openapi.yaml branch
     if (method === "GET" && rawPath === "/openapi.yaml") {
         try {
             const specPath = path.join(__dirname, "docs", "openapi.yaml");
@@ -50,7 +55,7 @@ module.exports.handler = async (event) => {
         }
     }
 
-    // /docs branch (public) - Swagger UI (CDN)
+    // GET /docs branch (public) - Swagger UI (CDN)
     if (method === "GET" && (rawPath === "/docs" || rawPath === "/docs/")) {
     const html = `<!doctype html>
         <html lang="en">
@@ -96,7 +101,7 @@ module.exports.handler = async (event) => {
     }
 
 
-    // /me branch
+    // GET /me branch
     if (method === "GET" && rawPath === "/me") {
         if (!event.requestContext.authorizer || !event.requestContext.authorizer.jwt || !event.requestContext.authorizer.jwt.claims) {
             return {
@@ -122,6 +127,71 @@ module.exports.handler = async (event) => {
             body: JSON.stringify(successBody)
         };
     };
+
+    /* ---------- onboarding section ---------- */
+    // POST /signup branch
+    if (method === "POST" && rawPath === "/signup") {
+        let body;
+        try {
+            body = JSON.parse(event.body);
+        }
+        catch (e) {
+            return { statusCode: 400, body: "Invalid JSON" };
+        }
+
+        const { email, password } = body;
+
+        try {
+            const command = new SignUpCommand({
+                CliendId: process.env.COGNITO_CLIENT_ID,
+                Username: email,
+                Password: password,
+                UserAttributes: [
+                    { Name: "email", Value: email }
+                ],
+            });
+
+            await cognitoClient.send(command);
+
+            return {
+                statusCode: 201,
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    message: "Regsitration successful. Please check your email for a confirmation code."
+                })
+            };
+        } catch (err) {
+            console.log(err);
+            return {
+                statusCode: 400,
+                headers: { "Content-Type": "text/plain" },
+                body: err.message || "Registration failed"
+            }
+        }
+    }
+
+    // POST /confirm branch
+    if (method === "POST" && rawPath === "/confirm") {
+        const { email, code } = JSON.parse(event.body);
+
+        try {
+            const command = new ComfirmSignUpCommand({
+                ClientId: process.env.COGNITO_CLIENT_ID,
+                Username: email,
+                ConfirmationCode: code,
+            });
+
+            await cognitoClient.send(command);
+
+            return {
+                statusCode: 200,
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message: "Account confirmed! You can now log in." })
+            };
+        } catch (err) {
+            return { statusCode: 400, body: err.message };
+        }
+    }
 
     /* ---------- categories section ---------- */
     // GET /categories branch

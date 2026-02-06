@@ -44,6 +44,7 @@
   "homepage": "https://github.com/FHernandez08/expense-tracker-api#readme",
   "dependencies": {
     "@aws-cdk/aws-apigatewayv2-authorizers-alpha": "^2.114.1-alpha.0",
+    "@aws-sdk/client-cognito-identity-provider": "^3.984.0",
     "@aws-sdk/client-dynamodb": "^3.893.0",
     "@aws-sdk/client-s3": "^3.893.0",
     "@aws-sdk/lib-dynamodb": "^3.893.0",

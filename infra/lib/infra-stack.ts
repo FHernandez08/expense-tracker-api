@@ -112,6 +112,7 @@ export class InfraStack extends cdk.Stack {
       environment: {
         EXPENSE_TRACKER_TABLE: expenseTrackerTable.tableName,
         STAGE: stage,
+        COGNITO_CLIENT_ID: userPoolClient.userPoolClientId,
       }
     });
 
@@ -203,6 +204,21 @@ export class InfraStack extends cdk.Stack {
       methods: [apigwv2.HttpMethod.GET],
       integration: lambdaIntegration,
       authorizer: authorizer,
+    });
+
+    /* ----- onboarding routes ----- */
+    // POST /signup route
+    httpApi.addRoutes({
+      path: '/signup',
+      methods: [apigwv2.HttpMethod.POST],
+      integration: lambdaIntegration,
+    });
+
+    // POST /confirm route
+    httpApi.addRoutes({
+      path: '/confirm',
+      methods: [apigwv2.HttpMethod.POST],
+      integration: lambdaIntegration,
     });
 
     /* ----- categories routes ----- */
