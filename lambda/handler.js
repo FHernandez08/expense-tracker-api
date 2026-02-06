@@ -143,7 +143,7 @@ module.exports.handler = async (event) => {
 
         try {
             const command = new SignUpCommand({
-                CliendId: process.env.COGNITO_CLIENT_ID,
+                ClientId: process.env.COGNITO_CLIENT_ID,
                 Username: email,
                 Password: password,
                 UserAttributes: [
