@@ -10,6 +10,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "^3.985.0",
     "zod": "^4.3.5"
   }
 }
