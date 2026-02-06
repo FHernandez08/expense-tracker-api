@@ -27,7 +27,7 @@ export class InfraStack extends cdk.Stack {
 
     /* ------------------ Data Layer ------------------ */
     // create DynamoDB Categories table
-    const categoriesTable = new dynamodb.Table(this, 'ETCategoriesTable', {
+    const expenseTrackerTable = new dynamodb.Table(this, 'ETCategoriesTable', {
       partitionKey: {
         name: 'userId',
         type: dynamodb.AttributeType.STRING,
@@ -58,7 +58,7 @@ export class InfraStack extends cdk.Stack {
     /* ------------------ Config Layer ------------------ */
     new ssm.StringParameter(this, 'devParameter', {
       parameterName: `/${namePrefix}/table-name`,
-      stringValue: categoriesTable.tableName,
+      stringValue: expenseTrackerTable.tableName,
       description: 'A parameter used inside the SSM Parameter store for the APIs environment',
     });
 
@@ -96,13 +96,13 @@ export class InfraStack extends cdk.Stack {
       handler: 'handler.handler',
       timeout: cdk.Duration.seconds(15),
       environment: {
-        CATEGORIES_TABLE_NAME: categoriesTable.tableName,
+        EXPENSE_TRACKER_TABLE: expenseTrackerTable.tableName,
         STAGE: stage,
       }
     });
 
     // Granted Lambda permissions for categories table
-    categoriesTable.grantReadWriteData(httpApiLambda);
+    expenseTrackerTable.grantReadWriteData(httpApiLambda);
 
     /* ------------------ API Layer ------------------ */
     // defines the Authorizer using your User Pool and Client

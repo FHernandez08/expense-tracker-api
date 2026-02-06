@@ -1,14 +1,16 @@
 const { DynamoDBClient, ConditionalCheckFailedException, Delete$ } = require("@aws-sdk/client-dynamodb");
 const { DynamoDBDocumentClient, PutCommand, QueryCommand, UpdateCommand, DeleteCommand } = require("@aws-sdk/lib-dynamodb");
 const categorySchema = require("./schemas/category.schema.js");
+const budgetSchema = require("./schemas/budget.schema.js")
 const fs = require("fs");
 const path = require("path");
+const { raw } = require("express");
 
 module.exports.handler = async (event) => {
     // eslint-disable-next-line no-undef
     console.log('Request event: ', event);
 
-    const categoriesTableName = process.env.CATEGORIES_TABLE_NAME;
+    const expenseTrackerTableName = process.env.EXPENSE_TRACKER_TABLE;
     const rawPath = event.rawPath;
     const method = event.requestContext.http.method;
     const client = new DynamoDBClient({});
@@ -121,7 +123,7 @@ module.exports.handler = async (event) => {
         };
     };
 
-    /* categories section */
+    /* ---------- categories section ---------- */
     // GET /categories branch
     if (method === "GET" && rawPath === "/categories") {
         if (!event.requestContext.authorizer || !event.requestContext.authorizer.jwt || !event.requestContext.authorizer.jwt.claims) {
@@ -139,7 +141,7 @@ module.exports.handler = async (event) => {
             }
         }
 
-        if (!categoriesTableName) {
+        if (!expenseTrackerTableName) {
             return {
                 statusCode: 500,
                 body: "Internal Server Error!"
@@ -148,10 +150,11 @@ module.exports.handler = async (event) => {
         
        try {
             const command = new QueryCommand({
-                TableName: categoriesTableName,
-                KeyConditionExpression: "userId = :uid",
+                TableName: expenseTrackerTableName,
+                KeyConditionExpression: "userId = :uid AND begins_with(categoryId, :prefix)",
                 ExpressionAttributeValues: {
-                    ":uid": sub
+                    ":uid": sub,
+                    ":prefix": "CAT#"
                 },
             })
 
@@ -192,7 +195,7 @@ module.exports.handler = async (event) => {
 
         const userId = sub;
 
-        if (!categoriesTableName) {
+        if (!expenseTrackerTableName) {
             return {
                 statusCode: 500,
                 headers: { "Content-Type": "text/plain" },
@@ -232,15 +235,15 @@ module.exports.handler = async (event) => {
         };
 
         const validatedBody = validationResult.data;
-        const categoryId = crypto.randomUUID();
+        const sortKey = "CAT#" + crypto.randomUUID();
         const now = new Date().toISOString();
 
         try {
             const command = new PutCommand({
-                TableName: categoriesTableName,
+                TableName: expenseTrackerTableName,
                 Item: {
                     userId: userId,
-                    categoryId,
+                    categoryId: sortKey,
                     name: validatedBody.name,
                     createdAt: now,
                     updatedAt: now
@@ -251,7 +254,7 @@ module.exports.handler = async (event) => {
             return {
                 statusCode: 201,
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ id: categoryId, name: validatedBody.name, createdAt: now, updatedAt: now })
+                body: JSON.stringify({ id: sortKey, name: validatedBody.name, createdAt: now, updatedAt: now })
             }
         }
         catch (err) {
@@ -264,7 +267,7 @@ module.exports.handler = async (event) => {
         }
     }
 
-    // /PATCH /categories/{id}} branch
+    // /PATCH /categories/{id} branch
     if (method === 'PATCH' && rawPath.startsWith("/categories/")) {
         if (!event.requestContext.authorizer || !event.requestContext.authorizer.jwt || !event.requestContext.authorizer.jwt.claims) {
             return {
@@ -285,8 +288,10 @@ module.exports.handler = async (event) => {
         const id = event.pathParameters?.id;
         let categoryId;
 
+        const finalId = id.startsWith("CAT#") ? id : "CAT#" + id;
+
         if (typeof id === "string" && id.trim().length > 0) {
-            categoryId = id;
+            categoryId = finalId;
         }
 
         if (!categoryId) {
@@ -296,7 +301,7 @@ module.exports.handler = async (event) => {
             }
         }
 
-        if (!categoriesTableName) {
+        if (!expenseTrackerTableName) {
             return {
                 statusCode: 500,
                 headers: { "Content-Type": "text/plain" },
@@ -340,7 +345,7 @@ module.exports.handler = async (event) => {
 
         try {
             const command = new UpdateCommand({
-                TableName: categoriesTableName,
+                TableName: expenseTrackerTableName,
                 Key: {
                     userId: userId,
                     categoryId: categoryId
@@ -403,8 +408,10 @@ module.exports.handler = async (event) => {
         const id = event.pathParameters?.id;
         let categoryId;
 
+        const finalId = id.startsWith("CAT#") ? id : "CAT#" + id;
+
         if (typeof id === "string" && id.trim().length > 0) {
-            categoryId = id;
+            categoryId = finalId;
         }
 
         if (!categoryId) {
@@ -414,7 +421,7 @@ module.exports.handler = async (event) => {
             }
         }
 
-        if (!categoriesTableName) {
+        if (!expenseTrackerTableName) {
             return {
                 statusCode: 500,
                 headers: { "Content-Type": "text/plain" },
@@ -424,7 +431,7 @@ module.exports.handler = async (event) => {
 
         try {
             const command = new DeleteCommand({
-                TableName: categoriesTableName,
+                TableName: expenseTrackerTableName,
                 Key: {
                     userId: userId,
                     categoryId: categoryId,
@@ -456,8 +463,345 @@ module.exports.handler = async (event) => {
         }
     }
 
-    /* budgets section */
-    
+    /* ---------- budgets section ---------- */
+    // GET /budgets branch
+    if (method === "GET" && rawPath === "/budgets") {
+        if (!event.requestContext.authorizer || !event.requestContext.authorizer.jwt || !event.requestContext.authorizer.jwt.claims) {
+            return {
+                statusCode: 401,
+                body: "Unauthorized!"
+            }
+        }
+
+        const sub = event.requestContext.authorizer.jwt.claims.sub;
+        if (typeof sub !== "string" || sub.trim().length === 0) {
+            return {
+                statusCode: 401,
+                body: "Unauthorized!"
+            }
+        }
+
+        if (!expenseTrackerTableName) {
+            return {
+                statusCode: 500,
+                body: "Internal Server Error!"
+            }
+        }
+
+        const month = event.queryStringParameters?.month;
+        const prefix = month ? `BUD#${month}` : "BUD#";
+        
+        try {
+            const command = new QueryCommand({
+                TableName: expenseTrackerTableName,
+                KeyConditionExpression: "userId = :uid AND begins_with(categoryId, :p)",
+                ExpressionAttributeValues: {
+                    ":uid": sub,
+                    ":p": prefix
+                },
+            })
+
+            const response =  await documentClient.send(command);
+            const items = response.Items ?? [];
+            return {
+                statusCode: 200,
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ items })
+            };
+        }
+        catch (err) {
+            console.log(err);
+            return {
+                statusCode: 500,
+                headers: { "Content-Type": "text/plain" },
+                body: "Internal Server Error!"
+            }
+        }
+    }
+
+    // POST /budgets branch
+    if (method === "POST" && rawPath === "/budgets") {
+        if (!event.requestContext.authorizer || !event.requestContext.authorizer.jwt || !event.requestContext.authorizer.jwt.claims) {
+            return {
+                statusCode: 401,
+                body: "Unauthorized!"
+            }
+        }
+
+        const sub = event.requestContext.authorizer.jwt.claims.sub;
+        if (typeof sub !== "string" || sub.trim().length === 0) {
+            return {
+                statusCode: 401,
+                body: "Unauthorized!"
+            }
+        }
+
+        const userId = sub;
+
+        if (!expenseTrackerTableName) {
+            return {
+                statusCode: 500,
+                headers: { "Content-Type": "text/plain" },
+                body: "Internal Server Error!"
+            }
+        }
+
+        if (!event.body) {
+            return {
+                statusCode: 400,
+                body: "Bad Request!"
+            }
+        }
+
+        let parsedBody;
+
+        try {
+            parsedBody = JSON.parse(event.body);
+        }
+        catch (err) {
+            console.log(err);
+            return {
+                statusCode: 400,
+                headers: { "Content-Type": "text/plain" },
+                body: "Bad Request"
+            }
+        }
+
+        const validationResult = budgetSchema.safeParse(parsedBody);
+
+        if (!validationResult.success) {
+            return {
+                statusCode: 400,
+                headers: { "Content-Type": "text/plain" },
+                body: "Bad Request"
+            };
+        };
+
+        const validatedBody = validationResult.data;
+        const sortKey = "BUD#" + validatedBody.month + "#" + validatedBody.categoryId;
+        const now = new Date().toISOString();
+
+        try {
+            const command = new PutCommand({
+                TableName: expenseTrackerTableName,
+                Item: {
+                    userId: userId,
+                    categoryId: sortKey,
+                    amount: validatedBody.amount,
+                    createdAt: now,
+                    updatedAt: now
+                }
+            });
+
+            const response = await documentClient.send(command);
+            return {
+                statusCode: 201,
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id: sortKey, name: validatedBody.name, createdAt: now, updatedAt: now })
+            }
+        }
+        catch (err) {
+            console.log(err);
+            return {
+                statusCode: 500,
+                headers: { "Content-Type": "text/plain" },
+                body: "Internal Server Error"
+            }
+        }
+    }
+
+    // PATCH /budgets/{id} branch
+    if (method === "PATCH" && rawPath.startsWith("/budgets/")) {
+        if (!event.requestContext.authorizer || !event.requestContext.authorizer.jwt || !event.requestContext.authorizer.jwt.claims) {
+            return {
+                statusCode: 401,
+                body: "Unauthorized!"
+            }
+        }
+
+        const sub = event.requestContext.authorizer.jwt.claims.sub;
+        if (typeof sub !== "string" || sub.trim().length === 0) {
+            return {
+                statusCode: 401,
+                body: "Unauthorized!"
+            }
+        }
+
+        const userId = sub;
+        const id = event.pathParameters?.id;
+        let categoryId;
+
+        const finalId = id.startsWith("BUD#") ? id : "BUD#" + id;
+
+        if (typeof id === "string" && id.trim().length > 0) {
+            categoryId = finalId;
+        }
+
+        if (!categoryId) {
+            return {
+                statusCode: 400,
+                body: "Bad Request!"
+            }
+        }
+
+        if (!expenseTrackerTableName) {
+            return {
+                statusCode: 500,
+                headers: { "Content-Type": "text/plain" },
+                body: "Internal Server Error!"
+            }
+        }
+
+        if (!event.body) {
+            return {
+                statusCode: 400,
+                body: "Bad Request!"
+            }
+        }
+
+        let parsedBody;
+
+        try {
+            parsedBody = JSON.parse(event.body);
+        }
+        catch (err) {
+            console.log(err);
+            return {
+                statusCode: 400,
+                headers: { "Content-Type": "text/plain" },
+                body: "Bad Request"
+            }
+        }
+
+        const validationResult = budgetSchema.safeParse(parsedBody);
+
+        if (!validationResult.success) {
+            return {
+                statusCode: 400,
+                headers: { "Content-Type": "text/plain" },
+                body: "Bad Request"
+            };
+        };
+
+        const validatedBody = validationResult.data;
+        const now = new Date().toISOString();
+
+        try {
+            const command = new UpdateCommand({
+                TableName: expenseTrackerTableName,
+                Key: {
+                    userId: userId,
+                    categoryId: categoryId
+                },
+                UpdateExpression: "SET #a = :amount, updatedAt = :now",
+                ExpressionAttributeValues: {
+                    ":amount": validatedBody.amount,
+                    ":now": now,
+                },
+                ConditionExpression: "attribute_exists(categoryId)",
+                ReturnValues: "ALL_NEW"
+            })
+
+            const response = await documentClient.send(command)
+            return {
+                statusCode: 200,
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(response.Attributes)
+            }
+        }
+        catch (err) {
+            console.log(err)
+
+            if (err.name === "ConditionalCheckFailedException") {
+                return {
+                    statusCode: 404,
+                    headers: { "Content-Type": "text/plain" },
+                    body: "Not Found"
+                }
+            }
+            return {
+                statusCode: 500,
+                headers: { "Content-Type": "text/plain" },
+                body: "Internal Server Error"
+            }
+        }
+    }
+
+    // DELETE /budgets/{id} branch
+    if (method === "DELETE" && rawPath.startsWith("/budgets/")) {
+        if (!event.requestContext.authorizer || !event.requestContext.authorizer.jwt || !event.requestContext.authorizer.jwt.claims) {
+            return {
+                statusCode: 401,
+                body: "Unauthorized!"
+            }
+        }
+
+        const sub = event.requestContext.authorizer.jwt.claims.sub;
+        if (typeof sub !== "string" || sub.trim().length === 0) {
+            return {
+                statusCode: 401,
+                body: "Unauthorized!"
+            }
+        }
+
+        const userId = sub;
+        const id = event.pathParameters?.id;
+        let categoryId;
+
+        const finalId = id.startsWith("BUD#") ? id : "BUD#" + id;
+
+        if (typeof id === "string" && id.trim().length > 0) {
+            categoryId = finalId;
+        }
+
+        if (!categoryId) {
+            return {
+                statusCode: 400,
+                body: "Bad Request!"
+            }
+        }
+
+        if (!expenseTrackerTableName) {
+            return {
+                statusCode: 500,
+                headers: { "Content-Type": "text/plain" },
+                body: "Internal Server Error!"
+            }
+        }
+
+        try {
+            const command = new DeleteCommand({
+                TableName: expenseTrackerTableName,
+                Key: {
+                    userId: userId,
+                    categoryId: categoryId,
+                },
+                ConditionExpression: "attribute_exists(categoryId)"
+            })
+
+            const response = await documentClient.send(command);
+            return {
+                statusCode: 204,
+                body: "",
+            }
+        } 
+        catch (err) {
+            console.log(err)
+
+            if (err.name === "ConditionalCheckFailedException") {
+                return {
+                    statusCode: 404,
+                    headers: { "Content-Type": "text/plain" },
+                    body: "Not Found"
+                }
+            }
+            return {
+                statusCode: 500,
+                headers: { "Content-Type": "text/plain" },
+                body: "Internal Server Error"
+            }
+        }
+    }
     
     return {
         statusCode: 404,
