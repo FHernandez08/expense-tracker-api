@@ -41,6 +41,20 @@ export class InfraStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.RETAIN
     });
 
+    expenseTrackerTable.addGlobalSecondaryIndex(
+      {
+        indexName: "UserDateIndex",
+        partitionKey: {
+          name: 'userId',
+          type: dynamodb.AttributeType.STRING
+        },
+        sortKey: {
+          name: 'occurredAt',
+          type: dynamodb.AttributeType.STRING
+        }
+      }
+    );
+
     // adding private S3 bucket
     const privateBucket = new s3.Bucket(this, 'csvExportsBucket', {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
