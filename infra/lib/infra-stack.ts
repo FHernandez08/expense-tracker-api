@@ -8,7 +8,7 @@ import { HttpJwtAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as s3 from 'aws-cdk-lib/aws-s3';
-import { HttpUserPoolAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
+import { HttpUserPoolAuthorizer, HttpNoneAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as targets from 'aws-cdk-lib/aws-events-targets';
 
@@ -212,6 +212,7 @@ export class InfraStack extends cdk.Stack {
       path: '/signup',
       methods: [apigwv2.HttpMethod.POST],
       integration: lambdaIntegration,
+      authorizer: new HttpNoneAuthorizer(),
     });
 
     // POST /confirm route
@@ -219,6 +220,7 @@ export class InfraStack extends cdk.Stack {
       path: '/confirm',
       methods: [apigwv2.HttpMethod.POST],
       integration: lambdaIntegration,
+      authorizer: new HttpNoneAuthorizer(),
     });
 
     // POST /login route
@@ -226,6 +228,7 @@ export class InfraStack extends cdk.Stack {
       path: '/login',
       methods: [apigwv2.HttpMethod.POST],
       integration: lambdaIntegration,
+      authorizer: new HttpNoneAuthorizer(),
     });
 
     /* ----- categories routes ----- */
