@@ -288,6 +288,14 @@ export class InfraStack extends cdk.Stack {
       authorizer: authorizer,
     });
 
+    /* -------- rules routes -------- */
+    httpApi.addRoutes({
+      path: '/rules',
+      methods: [apigwv2.HttpMethod.POST],
+      integration: lambdaIntegration,
+      authorizer: authorizer,
+    });
+
     /* -------- OUTPUTS ----------*/
 
     // Output the API base URL
