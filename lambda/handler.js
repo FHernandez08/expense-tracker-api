@@ -1028,6 +1028,69 @@ module.exports.handler = async (event) => {
 
         return { statusCode: 201, body: JSON.stringify({ id: ruleId }) };
     }
+
+    /* ---------- summary section ---------- */
+    // GET /summary branch
+    if (method === "GET" && rawPath === "/summary") {
+        const sub = event.requestContext.authorizer?.jwt?.claims?.sub;
+        const month = event.queryStringParameters?.month;
+
+        if (!sub || !month) {
+            return {
+                statusCode: 400,
+                body: "Missing User ID or Month"
+            };
+        }
+
+        try {
+            const [budgetData, transactionData] = await Promise.all([
+                documentClient.send(new QueryCommand({
+                    TableName: expenseTrackerTableName,
+                    KeyConditionExpression: "userId = :uid AND begins_with(categoryId, :p)",
+                    ExpressionAttributeValues: {
+                        ":uid": sub,
+                        ":p": `BUD#${month}`
+                    }
+                })),
+
+                documentClient.send(new QueryCommand({
+                    TableName: expenseTrackerTableName,
+                    IndexName: "UserDateIndex",
+                    KeyConditionExpression: "userId = :uid AND begins_with(occurredAt, :m)",
+                    ExpressionAttributeValues: {
+                        ":uid": sub,
+                        ":m": month
+                    }
+                }))
+            ]);
+
+            const budgets = budgetData.Items ?? [];
+            const transactions = transactionData.Items ?? [];
+
+            const totalBudgeted = budgets.reduce((sum, b) => sum + (b.amount || 0), 0);
+            const totalSpent = transactions.reduce((sum, t) => sum + (t.amount || 0), 0);
+
+            return {
+                statusCode: 200,
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    month,
+                    totalBudgeted,
+                    totalSpent,
+                    remaining: totalBudgeted - totalSpent,
+                    transactionCount: transactions.length,
+                    budgetCount: budgets.length
+                })
+            };
+        }
+        catch (err) {
+            console.log(err);
+            return {
+                statusCode: 500,
+                body: "Internal Server Error"
+            };
+        }
+    };
     
     return {
         statusCode: 404,
