@@ -26,6 +26,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install Lambda dependencies
+        run: |
+            cd lambda
+            npm install
+
       # STEP 6: Login
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -40,4 +45,3 @@ jobs:
       # STEP 7: Action
       - name: CDK deploy
         run: npx cdk deploy -c stage=dev --app "npx ts-node infra/bin/infra.ts" --require-approval never
-
