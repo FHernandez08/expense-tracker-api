@@ -1,13 +1,12 @@
 const { DynamoDBClient, ConditionalCheckFailedException, Delete$ } = require("@aws-sdk/client-dynamodb");
 const { DynamoDBDocumentClient, PutCommand, QueryCommand, UpdateCommand, DeleteCommand } = require("@aws-sdk/lib-dynamodb");
 const categorySchema = require("./schemas/category.schema.js");
-const budgetSchema = require("./schemas/budget.schema.js")
+const budgetSchema = require("./schemas/budget.schema.js");
+const transactionSchema = require("./schemas/transaction.schema.js");
 const fs = require("fs");
 const path = require("path");
-const { raw } = require("express");
 
 module.exports.handler = async (event) => {
-    // eslint-disable-next-line no-undef
     console.log('Request event: ', event);
 
     const expenseTrackerTableName = process.env.EXPENSE_TRACKER_TABLE;
@@ -795,6 +794,161 @@ module.exports.handler = async (event) => {
                     body: "Not Found"
                 }
             }
+            return {
+                statusCode: 500,
+                headers: { "Content-Type": "text/plain" },
+                body: "Internal Server Error"
+            }
+        }
+    }
+
+    /* ---------- transactions section ---------- */
+    // GET /transactions branch
+    if (method === "GET" && rawPath === "/transactions") {
+        if (!event.requestContext.authorizer || !event.requestContext.authorizer.jwt || !event.requestContext.authorizer.jwt.claims) {
+            return {
+                statusCode: 401,
+                body: "Unauthorized!"
+            }
+        }
+
+        const sub = event.requestContext.authorizer.jwt.claims.sub;
+        if (typeof sub !== "string" || sub.trim().length === 0) {
+            return {
+                statusCode: 401,
+                body: "Unauthorized!"
+            }
+        }
+
+        if (!expenseTrackerTableName) {
+            return {
+                statusCode: 500,
+                body: "Internal Server Error!"
+            }
+        }
+        
+        try {
+            const command = new QueryCommand({
+                TableName: expenseTrackerTableName,
+                IndexName: "UserDateIndex",
+                KeyConditionExpression: "userId = :uid",
+                ExpressionAttributeValues: {
+                    ":uid": sub,
+                },
+                ScanIndexForward: false
+            });
+
+            const response =  await documentClient.send(command);
+            const items = response.Items ?? [];
+            return {
+                statusCode: 200,
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ items })
+            };
+        }
+        catch (err) {
+            console.log(err);
+            return {
+                statusCode: 500,
+                headers: { "Content-Type": "text/plain" },
+                body: "Internal Server Error!"
+            }
+        }
+    }
+
+    // POST /transactions branch
+    if (method === "POST" && rawPath === "/transactions") {
+        if (!event.requestContext.authorizer || !event.requestContext.authorizer.jwt || !event.requestContext.authorizer.jwt.claims) {
+            return {
+                statusCode: 401,
+                body: "Unauthorized!"
+            }
+        }
+
+        const sub = event.requestContext.authorizer.jwt.claims.sub;
+        if (typeof sub !== "string" || sub.trim().length === 0) {
+            return {
+                statusCode: 401,
+                body: "Unauthorized!"
+            }
+        }
+
+        const userId = sub;
+
+        if (!expenseTrackerTableName) {
+            return {
+                statusCode: 500,
+                headers: { "Content-Type": "text/plain" },
+                body: "Internal Server Error!"
+            }
+        }
+
+        if (!event.body) {
+            return {
+                statusCode: 400,
+                body: "Bad Request!"
+            }
+        }
+
+        let parsedBody;
+
+        try {
+            parsedBody = JSON.parse(event.body);
+        }
+        catch (err) {
+            console.log(err);
+            return {
+                statusCode: 400,
+                headers: { "Content-Type": "text/plain" },
+                body: "Bad Request"
+            }
+        }
+
+        const validationResult = transactionSchema.safeParse(parsedBody);
+
+        if (!validationResult.success) {
+            return {
+                statusCode: 400,
+                headers: { "Content-Type": "text/plain" },
+                body: "Bad Request"
+            };
+        };
+
+        const validatedBody = validationResult.data;
+        const sortKey = "TX#" + crypto.randomUUID();
+        const now = new Date().toISOString();
+
+        try {
+            const command = new PutCommand({
+                TableName: expenseTrackerTableName,
+                Item: {
+                    userId: userId,
+                    categoryId: sortKey,
+                    amount: validatedBody.amount,
+                    description: validatedBody.description,
+                    occurredAt: validatedBody.occurredAt,
+                    linkedCategoryId: validatedBody.categoryId,
+                    createdAt: now,
+                    updatedAt: now
+                }
+            });
+
+            const response = await documentClient.send(command);
+            return {
+                statusCode: 201,
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ 
+                    id: sortKey,
+                    description: validatedBody.description,
+                    amount: validatedBody.amount,
+                    occurredAt: validatedBody.occurredAt,
+                    createdAt: now,
+                    updatedAt: now
+                 })
+            }
+        }
+        catch (err) {
+            console.log(err);
             return {
                 statusCode: 500,
                 headers: { "Content-Type": "text/plain" },

@@ -2,15 +2,15 @@ import * as cdk from 'aws-cdk-lib';
 
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import * as apigwv2 from 'aws-cdk-lib/aws-apigatewayv2';
 import * as apigwiv2integrations from 'aws-cdk-lib/aws-apigatewayv2-integrations';
-import { UserPool } from 'aws-cdk-lib/aws-cognito';
 import { HttpJwtAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import { HttpUserPoolAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
+import * as events from 'aws-cdk-lib/aws-events';
+import * as targets from 'aws-cdk-lib/aws-events-targets';
 
 interface InfraStackProps extends cdk.StackProps {
   stage: string;
@@ -115,8 +115,31 @@ export class InfraStack extends cdk.Stack {
       }
     });
 
-    // Granted Lambda permissions for categories table
+    // worker lambda function for rules handler
+    const recurringWorker = new lambda.Function(this, 'rcurringWorker', {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      code: lambda.Code.fromAsset(lambdaCodePath),
+      handler: 'worker.handler',
+      timeout: cdk.Duration.seconds(30),
+      environment: {
+        EXPENSE_TRACKER_TABLE: expenseTrackerTable.tableName,
+        STAGE: stage,
+      }
+    });
+
+    // creates the schedule
+    const dailyRule = new events.Rule(this, 'DailyRecurringRule', {
+      schedule: events.Schedule.cron({ minute: '0', hour: '0' }),
+    });
+
+    // Granted Lambda permissions for main table for routes
     expenseTrackerTable.grantReadWriteData(httpApiLambda);
+
+    // Granted Lambda permissions for main table for worker route
+    expenseTrackerTable.grantReadWriteData(recurringWorker);
+
+    // Link the scheudle to the Worker
+    dailyRule.addTarget(new targets.LambdaFunction(recurringWorker));
 
     /* ------------------ API Layer ------------------ */
     // defines the Authorizer using your User Pool and Client
@@ -244,6 +267,23 @@ export class InfraStack extends cdk.Stack {
     httpApi.addRoutes({
       path: '/budgets/{id}',
       methods: [apigwv2.HttpMethod.DELETE],
+      integration: lambdaIntegration,
+      authorizer: authorizer,
+    });
+
+    /* ----- transactions routes ----- */
+    // POST /transactions route
+    httpApi.addRoutes({
+      path: '/transactions',
+      methods: [apigwv2.HttpMethod.POST],
+      integration: lambdaIntegration,
+      authorizer: authorizer,
+    });
+
+    // GET /transactions route
+    httpApi.addRoutes({
+      path: '/transactions',
+      methods: [apigwv2.HttpMethod.GET],
       integration: lambdaIntegration,
       authorizer: authorizer,
     });
