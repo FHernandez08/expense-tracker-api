@@ -82,6 +82,7 @@ export class InfraStack extends cdk.Stack {
       signInAliases: {
         email: true,
       },
+      selfSignUpEnabled: true,
       passwordPolicy: {
         minLength: 8,
         requireDigits: true,
