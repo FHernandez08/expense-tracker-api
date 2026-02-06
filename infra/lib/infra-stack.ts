@@ -296,6 +296,14 @@ export class InfraStack extends cdk.Stack {
       authorizer: authorizer,
     });
 
+    /* -------- summary routes -------- */
+    httpApi.addRoutes({
+      path: '/summary',
+      methods: [apigwv2.HttpMethod.GET],
+      integration: lambdaIntegration,
+      authorizer: authorizer,
+    });
+
     /* -------- OUTPUTS ----------*/
 
     // Output the API base URL
