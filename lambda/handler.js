@@ -56,49 +56,48 @@ module.exports.handler = async (event) => {
 
     // GET /docs branch (public) - Swagger UI (CDN)
     if (method === "GET" && (rawPath === "/docs" || rawPath === "/docs/")) {
-    const html = `<!doctype html>
-        <html lang="en">
-        <head>
-            <meta charset="utf-8" />
-            <meta name="viewport" content="width=device-width,initial-scale=1" />
-            <title>Expense Tracker API Docs</title>
-            <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist/swagger-ui.css" />
-            <style>
-            body { margin: 0; }
-            .topbar { display: none; }
-            </style>
-        </head>
-        <body>
-            <div id="swagger-ui"></div>
-
-            <script src="https://unpkg.com/swagger-ui-dist/swagger-ui-bundle.js"></script>
-            <script src="https://unpkg.com/swagger-ui-dist/swagger-ui-standalone-preset.js"></script>
-            <script>
-            window.onload = () => {
-                window.ui = SwaggerUIBundle({
-                url: "/openapi.yaml",
-                dom_id: "#swagger-ui",
-                presets: [
-                    SwaggerUIBundle.presets.apis,
-                    SwaggerUIStandalonePreset
-                ],
-                layout: "StandaloneLayout"
-                });
-            };
-            </script>
-        </body>
-        </html>`;
+        const html = `<!doctype html>
+            <html lang="en">
+            <head>
+                <meta charset="utf-8" />
+                <meta name="viewport" content="width=device-width,initial-scale=1" />
+                <title>Expense Tracker API Docs</title>
+                <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist/swagger-ui.css" />
+                <style>
+                    body { margin: 0; background: #fafafa; }
+                    .topbar { display: none; }
+                </style>
+            </head>
+            <body>
+                <div id="swagger-ui"></div>
+                <script src="https://unpkg.com/swagger-ui-dist/swagger-ui-bundle.js"></script>
+                <script src="https://unpkg.com/swagger-ui-dist/swagger-ui-standalone-preset.js"></script>
+                <script>
+                window.onload = () => {
+                    window.ui = SwaggerUIBundle({
+                        url: "/openapi.yaml", // Points to your YAML route
+                        dom_id: "#swagger-ui",
+                        presets: [
+                            SwaggerUIBundle.presets.apis,
+                            SwaggerUIStandalonePreset
+                        ],
+                        layout: "StandaloneLayout",
+                        deepLinking: true
+                    });
+                };
+                </script>
+            </body>
+            </html>`;
 
         return {
             statusCode: 200,
             headers: {
-            "Content-Type": "text/html; charset=utf-8",
-            "Cache-Control": "no-store",
+                "Content-Type": "text/html; charset=utf-8",
+                "Cache-Control": "no-store",
             },
             body: html,
         };
     }
-
 
     // GET /me branch
     if (method === "GET" && rawPath === "/me") {

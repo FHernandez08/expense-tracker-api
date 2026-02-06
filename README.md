@@ -8,73 +8,52 @@ This project demonstrates production-style backend architecture including authen
 ## Live Links
 
 - **Live Demo (Swagger UI):**  
-  https://nll100bzb7.execute-api.us-east-1.amazonaws.com/docs
+  https://t5gbf3g304.execute-api.us-east-1.amazonaws.com/docs
 
 - **Health Check:**  
-  https://nll100bzb7.execute-api.us-east-1.amazonaws.com/health
+  https://t5gbf3g304.execute-api.us-east-1.amazonaws.com/health
 
 - **API Base URL:**  
-  https://nll100bzb7.execute-api.us-east-1.amazonaws.com
-
+  https://t5gbf3g304.execute-api.us-east-1.amazonaws.com
 ---
 
 ## Current Release
 
-**Version:** v0.1 — Initial Portfolio Release
+## Current Release
+**Version:** v1.0 — Production-Ready Serverless Backend
 
-This release intentionally focuses on a small but complete vertical slice:
-- Deployed AWS infrastructure
-- Authentication via Cognito
-- A real domain resource backed by DynamoDB
-- OpenAPI documentation
+This release includes the full core financial engine:
+- Complete User Lifecycle (Sign-up, Email Verification, Login)
+- Full Expense Tracking (Categories, Transactions, Budgets)
+- Automated Monthly Summary Analytics
+- Secure-by-Default Architecture
 
----
-
-## Features (v0.1)
-
+## Features (v1.0)
 ### Infrastructure
-- AWS CDK (TypeScript)
-- API Gateway (HTTP API)
-- AWS Lambda (Node.js)
-- Amazon Cognito (JWT authentication)
-- DynamoDB (Categories)
-- CloudWatch logging
+- AWS CDK (TypeScript) for 100% Infrastructure-as-Code
+- API Gateway (HTTP API) with JWT Authorizer
+- AWS Lambda (Node.js 20) with high-performance bundling
+- Amazon Cognito Managed Identity Provider
+- DynamoDB with Global Secondary Index (GSI) for time-series queries
 
 ### API Endpoints
+**Public (Unauthenticated)**
+- `GET /health` — Service health check
+- `POST /signup` — User registration
+- `POST /confirm` — Email verification
+- `POST /login` — JWT token issuance
 
-**Public**
-- `GET /health` — service health check
-
-**Authenticated**
-- `GET /me` — returns authenticated user identity
-- `GET /categories` — list user categories
-- `POST /categories` — create a category for the user
-
----
-
-## Architecture Overview
-Client (Browser / curl / frontend)
-↓
-API Gateway (HTTP API)
-↓
-Lambda (request handling + auth context)
-↓
-DynamoDB (user-scoped data)
-
-
-**Authentication Flow**
-- Users authenticate via Amazon Cognito
-- Cognito issues a JWT access token
-- API Gateway validates JWTs
-- Lambda receives the authenticated user (`sub`) and enforces ownership
-
----
+**Private (JWT Required)**
+- `GET /summary` — Monthly budget vs. actual spending math
+- `GET /categories` — User-defined spending categories
+- `GET /transactions` — Financial record history
+- `POST /budgets` — Category-specific spending limits
 
 ## API Documentation
 
 The API is documented using OpenAPI and served via Swagger UI:
 
-https://nll100bzb7.execute-api.us-east-1.amazonaws.com/docs
+https://t5gbf3g304.execute-api.us-east-1.amazonaws.com/docs
 
 The documentation includes:
 - Request and response schemas
@@ -100,7 +79,11 @@ Refer to project scripts and configuration for local setup.
 
 1. Create or use an existing Cognito user
 2. Obtain a JWT access token
-3. Include the token in requests:
+3. Include the token in requests
+
+Recommended checks:
+- `GET /summary?month=2026-02` returns a JSON object with total spent vs. budgeted.
+- `POST /budgets` sets a limit that is immediately reflected in the summary math.
 
 ## Authorization Bearer <JWT>
 
@@ -124,6 +107,19 @@ Recommended checks:
 - Stronger validation and error handling
 - Expanded test coverage
 - CI pipeline (lint + tests)
+
+### v2.0
+- **AI-Powered Insights:** Integration with Amazon Bedrock for automatic transaction categorization.
+- **Reporting Engine:** S3-based CSV export using Pre-signed URLs for secure data download.
+- **Proactive Alerts:** AWS SNS integration for "Near Budget Limit" email/SMS notifications.
+- **Observability:** Distributed tracing with AWS X-Ray to monitor cold starts and latency.
+
+---
+
+## Design Philosophy
+- **Secure by Default:** Every endpoint is locked by a JWT authorizer at the infrastructure level. Public routes are managed as explicit exceptions.
+- **Operational Excellence:** 100% of resources are managed via CDK; no manual "Click-Ops" in the AWS console.
+- **Scalability:** Stateless Lambda functions ensure the API can scale from 0 to thousands of concurrent users instantly.
 
 ---
 
