@@ -8,7 +8,6 @@ const transactionSchema = require("./schemas/transaction.schema.js");
 const recurringRuleSchema = require("./schemas/rule.schema.js");
 const fs = require("fs");
 const path = require("path");
-const { raw } = require("express");
 
 const cognitoClient = new CognitoIdentityProviderClient({});
 
