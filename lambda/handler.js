@@ -3,6 +3,7 @@ const { DynamoDBDocumentClient, PutCommand, QueryCommand, UpdateCommand, DeleteC
 const categorySchema = require("./schemas/category.schema.js");
 const budgetSchema = require("./schemas/budget.schema.js");
 const transactionSchema = require("./schemas/transaction.schema.js");
+const recurringRuleSchema = require("./schemas/rule.schema.js");
 const fs = require("fs");
 const path = require("path");
 
@@ -955,6 +956,77 @@ module.exports.handler = async (event) => {
                 body: "Internal Server Error"
             }
         }
+    }
+
+    /* ---------- rules section ---------- */
+    // POST /rules branch
+    if (method === "POST" && rawPath === "/rules") {
+        if (!event.requestContext.authorizer || !event.requestContext.authorizer.jwt || !event.requestContext.authorizer.jwt.claims) {
+            return {
+                statusCode: 401,
+                body: "Unauthorized!"
+            }
+        }
+
+        const sub = event.requestContext.authorizer.jwt.claims.sub;
+        if (typeof sub !== "string" || sub.trim().length === 0) {
+            return {
+                statusCode: 401,
+                body: "Unauthorized!"
+            }
+        }
+
+        const userId = sub;
+
+        if (!expenseTrackerTableName) {
+            return {
+                statusCode: 500,
+                headers: { "Content-Type": "text/plain" },
+                body: "Internal Server Error!"
+            }
+        }
+
+        if (!event.body) {
+            return {
+                statusCode: 400,
+                body: "Bad Request!"
+            }
+        }
+
+        let parsedBody;
+
+        try {
+            parsedBody = JSON.parse(event.body);
+        }
+        catch (err) {
+            console.log(err);
+            return {
+                statusCode: 400,
+                headers: { "Content-Type": "text/plain" },
+                body: "Bad Request"
+            }
+        }
+
+        const validationResult = recurringRuleSchema.safeParse(parsedBody);
+        if (!validationResult.success) return { statusCode: 400, body: "Bad Request" };
+
+        const validatedBody = validationResult.data;
+        const ruleId = "RULE#" + crypto.randomUUID();
+
+        await documentClient.send(new PutCommand({
+            TableName: expenseTrackerTableName,
+            Item: {
+                userId: userId,
+                categoryId: ruleId,
+                amount: validatedBody.amount,
+                description: validatedBody.description,
+                dayOfMonth: validatedBody.dayOfMonth,
+                linkedCategoryId: validatedBody.categoryId,
+                createdAt: new Date().toISOString()
+            }
+        }));
+
+        return { statusCode: 201, body: JSON.stringify({ id: ruleId }) };
     }
     
     return {
