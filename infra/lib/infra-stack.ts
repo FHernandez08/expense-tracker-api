@@ -189,14 +189,16 @@ export class InfraStack extends cdk.Stack {
     httpApi.addRoutes({
       path: '/openapi.yaml',
       methods: [apigwv2.HttpMethod.GET],
-      integration: lambdaIntegration
+      integration: lambdaIntegration,
+      authorizer: new apigwv2.HttpNoneAuthorizer(),
     });
 
     // GET /docs route
     httpApi.addRoutes({
       path: '/docs',
       methods: [apigwv2.HttpMethod.GET],
-      integration: lambdaIntegration
+      integration: lambdaIntegration,
+      authorizer: new apigwv2.HttpNoneAuthorizer(),
     });
 
     // GET /me route
