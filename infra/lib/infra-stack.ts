@@ -221,6 +221,13 @@ export class InfraStack extends cdk.Stack {
       integration: lambdaIntegration,
     });
 
+    // POST /login route
+    httpApi.addRoutes({
+      path: '/login',
+      methods: [apigwv2.HttpMethod.POST],
+      integration: lambdaIntegration,
+    });
+
     /* ----- categories routes ----- */
     // POST /categories route
     httpApi.addRoutes({

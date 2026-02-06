@@ -1,6 +1,6 @@
 const { DynamoDBClient, ConditionalCheckFailedException, Delete$ } = require("@aws-sdk/client-dynamodb");
 const { DynamoDBDocumentClient, PutCommand, QueryCommand, UpdateCommand, DeleteCommand } = require("@aws-sdk/lib-dynamodb");
-const { CognitoIdentityProviderClient, SignUpCommand, ConfirmSignUpCommand } = require("@aws-cdk/client-cognito-identity-provider");
+const { CognitoIdentityProviderClient, SignUpCommand, ConfirmSignUpCommand, InitiateAuthCommand } = require("@aws-cdk/client-cognito-identity-provider");
 
 const categorySchema = require("./schemas/category.schema.js");
 const budgetSchema = require("./schemas/budget.schema.js");
@@ -175,7 +175,7 @@ module.exports.handler = async (event) => {
         const { email, code } = JSON.parse(event.body);
 
         try {
-            const command = new ComfirmSignUpCommand({
+            const command = new ConfirmSignUpCommand({
                 ClientId: process.env.COGNITO_CLIENT_ID,
                 Username: email,
                 ConfirmationCode: code,
@@ -190,6 +190,36 @@ module.exports.handler = async (event) => {
             };
         } catch (err) {
             return { statusCode: 400, body: err.message };
+        }
+    }
+
+    // POST /login branch
+    if (method === "POST" && rawPath === "/login") {
+        const { email, password } = JSON.parse(event.body);
+
+        try {
+            const command = new InitiateAuthCommand({
+                AuthFlow: "USER_PASSWORD_AUTH",
+                ClientId: process.env.COGNITO_CLIENT_ID,
+                AuthParameters: {
+                    USERNAME: email,
+                    PASSWORD: password,
+                }
+            });
+
+            const response = await cognitoClient.send(command);
+
+            return {
+                statusCode: 200,
+                headers: { "Content-Type":  "application/json" },
+                body: JSON.stringify({
+                    idToken: response.AuthenticationResult.IdToken,
+                    refreshToken: response.AuthenticationResult.RefreshToken,
+                    expiresIn: response.AuthenticationResult.ExpiresIn
+                })
+            };
+        } catch (err) {
+            return { statusCode: 401, body: "Invalid email or password" };
         }
     }
 
